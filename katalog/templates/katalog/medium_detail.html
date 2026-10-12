@@ -1,0 +1,91 @@
+{% extends "katalog/base.html" %}
+{% load format_ch %}
+{% block title %}{{ o.titel }}{% endblock %}
+{% block content %}
+<p class="zurueck"><a href="javascript:history.back()">← Zurück</a></p>
+<div class="topbar">
+  <div>
+    <h2>{{ o.titel }}</h2>
+    <div class="sub">
+      <span class="pill">{{ o.medientyp }}</span>
+      <span class="status-{{ o.status }}">{{ o.get_status_display }}</span>
+      {% if o.fachgebiet %} · {{ o.fachgebiet }}{% endif %}
+    </div>
+  </div>
+  {% if darf_bearbeiten %}<a class="button" href="{% url 'admin:katalog_objekt_change' o.pk %}">Bearbeiten</a>{% endif %}
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h3>Stammdaten</h3>
+    <dl class="felder">
+      <dt>Verlag</dt><dd>{{ o.verlag|default:"–" }}</dd>
+      <dt>Lieferant</dt><dd>{{ o.lieferant|default:"–" }}</dd>
+      <dt>ISSN Print / Online</dt><dd>{{ o.issn_print|default:"–" }} / {{ o.issn_online|default:"–" }}</dd>
+      <dt>Bibliotheken</dt>
+      <dd>{% for ob in o.objektbibliothek_set.all %}{{ ob.bibliothek.name }} ({{ ob.bibliothek.kuerzel }}){% if ob.verwaltung %}, verwaltet durch {{ ob.verwaltung }}{% endif %}{% if not forloop.last %}<br>{% endif %}{% empty %}–{% endfor %}</dd>
+      {% if o.paket %}<dt>Teil von Paket</dt><dd><a href="{% url 'medium_detail' o.paket.pk %}">{{ o.paket }}</a></dd>{% endif %}
+      {% if o.titel_im_paket.all %}<dt>Titel im Paket</dt><dd>{% for t in o.titel_im_paket.all %}<a href="{% url 'medium_detail' t.pk %}">{{ t }}</a>{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>{% endif %}
+    </dl>
+  </section>
+  <section class="panel">
+    <h3>Entscheide</h3>
+    <ul class="entscheide">
+    {% for e in o.entscheide.all %}
+      <li><span class="pill e-{{ e.entscheid }}">{{ e.get_entscheid_display }}</span> {{ e.datum|date:"d.m.Y" }}{% if e.person %} · {{ e.person }}{% endif %}
+        {% if e.begruendung %}<div class="muted klein">{{ e.begruendung }}</div>{% endif %}</li>
+    {% empty %}<li class="muted">Noch kein Entscheid erfasst.</li>
+    {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="panel">
+  <h3>Kosten, Nutzung und CPU pro Jahr</h3>
+  <div class="table-wrap flach">
+  <table class="data">
+    <thead>
+      <tr><th>Jahr</th><th class="num">Kosten CHF</th>
+        {% for c in codes %}<th class="num">Nutzung {{ c }}</th><th class="num">CPU {{ c }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+    {% for z in jahreswerte %}
+      <tr>
+        <td>{{ z.jahr }}</td>
+        <td class="num">{% if z.kosten is not None %}{{ z.kosten|chf }}{% elif z.kategorie %}<span class="muted">{{ z.kategorie }}</span>{% else %}–{% endif %}</td>
+        {% for w in z.werte %}
+          <td class="num">{{ w.nutzung|zahl }}</td>
+          <td class="num">{% if w.cpu is not None %}<span class="pill {% if w.cpu >= 50 %}warn{% endif %}">{{ w.cpu|chf }}</span>{% else %}–{% endif %}</td>
+        {% endfor %}
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty-state">Keine Kosten- oder Nutzungsdaten.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="panel">
+    <h3>Verwaltung</h3>
+    {% for jahr, eintraege in verwaltung %}
+      {% for v in eintraege %}
+      <dl class="felder kompakt">
+        <dt>{{ jahr }} · {{ v.bibliothek.kuerzel }}</dt>
+        <dd>{{ v.get_erwerbungsart_display|default:"–" }}{% if v.bestellposten_alma %} · Alma {{ v.bestellposten_alma }}{% endif %}{% if v.etat_code %} · Etat {{ v.etat_code }}{% endif %}{% if v.abo_nr %} · Abo {{ v.abo_nr }}{% endif %}{% if v.laufzeit_bis %} · läuft bis {{ v.laufzeit_bis|date:"d.m.Y" }}{% endif %}</dd>
+      </dl>
+      {% endfor %}
+    {% empty %}<p class="muted">Keine Verwaltungsdaten.</p>
+    {% endfor %}
+  </section>
+  <section class="panel">
+    <h3>Notizen</h3>
+    <ul class="notizen">
+    {% for n in o.notizen.all %}
+      <li><span class="pill">{{ n.get_typ_display }}</span>{% if n.jahr %} {{ n.jahr }}{% endif %}<div>{{ n.text|linebreaksbr }}</div></li>
+    {% empty %}<li class="muted">Keine Notizen.</li>
+    {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

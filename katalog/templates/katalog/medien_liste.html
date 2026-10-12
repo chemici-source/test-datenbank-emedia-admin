@@ -1,0 +1,83 @@
+{% extends "katalog/base.html" %}
+{% load format_ch %}
+{% block title %}Medien{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <h2>Medien &amp; CPU</h2>
+    <div class="sub">{{ anzahl|zahl }} Medien{% if filter_aktiv %} (gefiltert){% endif %} · Werte für {{ jahr }}, Nutzung {{ kennzahl }}</div>
+  </div>
+  <div class="aktionen">
+    <a class="button sekundaer" href="{% url_mit format='csv' seite=None %}">CSV / Excel</a>
+    {% if perms.katalog.add_objekt %}<a class="button" href="{% url 'admin:katalog_objekt_add' %}">+ Neues Medium</a>{% endif %}
+  </div>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="text" name="q" placeholder="Titel, ISSN, Verlag, Fachgebiet …" value="{{ q }}">
+  <select name="bibliothek"><option value="">Alle Bibliotheken</option>
+    {% for b in bibliotheken %}<option value="{{ b.pk }}" {% if request.GET.bibliothek == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.kuerzel }} · {{ b.name }}</option>{% endfor %}
+  </select>
+  <select name="medientyp"><option value="">Alle Medientypen</option>
+    {% for m in medientypen %}<option value="{{ m.pk }}" {% if request.GET.medientyp == m.pk|stringformat:"s" %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+  </select>
+  <select name="status"><option value="">Alle Status</option>
+    {% for wert, label in status_wahl %}<option value="{{ wert }}" {% if request.GET.status == wert %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="jahr">
+    {% for j in jahre %}<option value="{{ j }}" {% if j == jahr %}selected{% endif %}>{{ j }}</option>{% endfor %}
+  </select>
+  <select name="kennzahl">
+    {% for k in kennzahlen %}<option value="{{ k.code }}" {% if k.code == kennzahl %}selected{% endif %}>{{ k.code }}</option>{% endfor %}
+  </select>
+  <input type="text" name="cpu_min" class="kurz" placeholder="CPU ab …" value="{{ cpu_min }}">
+  <button type="submit">Filtern</button>
+  {% if filter_aktiv %}<a class="reset" href="{% url 'medien_liste' %}">Zurücksetzen</a>{% endif %}
+</form>
+
+{% if vorschlag %}
+<div class="search-hint">Keine Treffer für „{{ q }}“. Meinten Sie <a href="{% url_mit q=vorschlag seite=None %}">„{{ vorschlag }}“</a>?</div>
+{% endif %}
+
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th><a href="{% url_mit sort='titel' dir='asc' seite=None %}">Titel{% if sort == 'titel' %} ▲{% endif %}</a></th>
+        <th><a href="{% url_mit sort='typ' dir='asc' seite=None %}">Typ</a></th>
+        <th>Bibliotheken</th>
+        <th>Status</th>
+        <th class="num"><a href="{% url_mit sort='kosten' dir='desc' seite=None %}">Kosten CHF{% if sort == 'kosten' %} ▼{% endif %}</a></th>
+        <th class="num"><a href="{% url_mit sort='nutzung' dir='desc' seite=None %}">Nutzung{% if sort == 'nutzung' %} ▼{% endif %}</a></th>
+        <th class="num"><a href="{% url_mit sort='cpu' dir='desc' seite=None %}">CPU{% if sort == 'cpu' %} ▼{% endif %}</a></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for o in seite %}
+      <tr>
+        <td><a href="{% url 'medium_detail' o.pk %}">{{ o.titel }}</a>{% if o.verlag %}<div class="muted klein">{{ o.verlag }}</div>{% endif %}</td>
+        <td><span class="pill">{{ o.medientyp }}</span></td>
+        <td>{% for b in o.bibliotheken.all %}{{ b.kuerzel }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+        <td class="status-{{ o.status }}">{{ o.get_status_display }}</td>
+        <td class="num">{{ o.kosten_jahr|chf:0 }}</td>
+        <td class="num">{{ o.nutzung_jahr|zahl }}</td>
+        <td class="num">{% if o.cpu_jahr is not None %}<span class="pill {% if o.cpu_jahr >= 50 %}warn{% endif %}">{{ o.cpu_jahr|chf }}</span>{% else %}–{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="empty-state">Keine Medien für diese Filter gefunden.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if seite.paginator.num_pages > 1 %}
+<div class="pagination">
+  <div>Seite {{ seite.number }} von {{ seite.paginator.num_pages }}</div>
+  <div class="pages">
+    {% if seite.has_previous %}<a href="{% url_mit seite=1 %}">« Erste</a><a href="{% url_mit seite=seite.previous_page_number %}">‹ Zurück</a>{% endif %}
+    <span class="current">{{ seite.number }}</span>
+    {% if seite.has_next %}<a href="{% url_mit seite=seite.next_page_number %}">Weiter ›</a><a href="{% url_mit seite=seite.paginator.num_pages %}">Letzte »</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

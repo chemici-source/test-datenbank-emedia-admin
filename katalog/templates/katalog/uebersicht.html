@@ -1,0 +1,88 @@
+{% extends "katalog/base.html" %}
+{% load format_ch %}
+{% block title %}Übersicht{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <h2>Übersicht {{ jahr }}</h2>
+    <div class="sub">{{ anzahl_medien|zahl }} Medien im Bestand · CPU = Kosten CHF ÷ Total Item Requests</div>
+  </div>
+  <form method="get" class="jahrwahl">
+    <select name="jahr" onchange="this.form.submit()">
+      {% for j in jahre %}<option value="{{ j }}" {% if j == jahr %}selected{% endif %}>{{ j }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="stat-row">
+  <div class="stat-card"><div class="value">{{ gesamt.kosten|chf:0 }}</div><div class="label">Kosten CHF {{ jahr }}</div></div>
+  <div class="stat-card"><div class="value">{{ gesamt.nutzung|zahl }}</div><div class="label">Nutzung (TIR) {{ jahr }}</div></div>
+  <div class="stat-card"><div class="value">{{ gesamt.cpu|chf }}</div><div class="label">CPU gesamt CHF</div></div>
+  <a class="stat-card" href="{% url 'medien_liste' %}?jahr={{ jahr }}&cpu_min={{ cpu_grenze }}&sort=cpu"><div class="value warn">{{ ueber_grenze }}</div><div class="label">Medien mit CPU ab {{ cpu_grenze }} CHF →</div></a>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h3>Pro Bibliothek</h3>
+    <table class="data">
+      <thead><tr><th>Bibliothek</th><th class="num">Medien</th><th class="num">Kosten CHF</th><th class="num">Nutzung</th><th class="num">CPU</th></tr></thead>
+      <tbody>
+      {% for b in pro_bibliothek %}
+        <tr>
+          <td><a href="{% url 'medien_liste' %}?bibliothek={{ b.bibliothek.pk }}&jahr={{ jahr }}">{{ b.bibliothek.name }}</a> <span class="muted">{{ b.bibliothek.kuerzel }}</span></td>
+          <td class="num">{{ b.anzahl }}</td><td class="num">{{ b.kosten|chf:0 }}</td>
+          <td class="num">{{ b.nutzung|zahl }}</td><td class="num">{{ b.cpu|chf }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h3>Kosten über die Jahre</h3>
+    <div class="balken">
+      {% for v in verlauf %}
+      <div class="balken-zeile {% if v.jahr == jahr %}aktiv{% endif %}">
+        <span class="balken-jahr">{{ v.jahr }}</span>
+        <span class="balken-spur"><span class="balken-fill" style="width: {{ v.prozent }}%"></span></span>
+        <span class="balken-wert">{{ v.kosten|chf:0 }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="muted klein">CPU gesamt pro Jahr: {% for v in verlauf %}{{ v.jahr }}: {{ v.cpu|chf }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h3>Höchste CPU {{ jahr }}</h3>
+    <table class="data">
+      <thead><tr><th>Titel</th><th class="num">Kosten</th><th class="num">Nutzung</th><th class="num">CPU</th></tr></thead>
+      <tbody>
+      {% for o in teuerste %}
+        <tr>
+          <td><a href="{% url 'medium_detail' o.pk %}">{{ o.titel }}</a></td>
+          <td class="num">{{ o.kosten_jahr|chf:0 }}</td><td class="num">{{ o.nutzung_jahr|zahl }}</td>
+          <td class="num"><span class="pill {% if o.cpu_jahr >= 50 %}warn{% endif %}">{{ o.cpu_jahr|chf }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p><a href="{% url 'medien_liste' %}?jahr={{ jahr }}&sort=cpu">Alle nach CPU sortiert →</a></p>
+  </section>
+
+  <section class="panel">
+    <h3>Letzte Entscheide</h3>
+    <ul class="entscheide">
+    {% for e in entscheide %}
+      <li>
+        <span class="pill e-{{ e.entscheid }}">{{ e.get_entscheid_display }}</span>
+        <a href="{% url 'medium_detail' e.objekt.pk %}">{{ e.objekt.titel }}</a>
+        <span class="muted">{{ e.datum|date:"d.m.Y" }}{% if e.person %} · {{ e.person }}{% endif %}</span>
+      </li>
+    {% empty %}<li class="muted">Noch keine Entscheide erfasst.</li>
+    {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% load static %}<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}E-Medien{% endblock %} · E-Medien MNW</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%230d9488'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{% static 'katalog/style.css' %}">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="dot"></span>
+        <div>
+          <h1>E-Medien MNW</h1>
+          <span>Bestand, Kosten &amp; Nutzung</span>
+        </div>
+      </div>
+      {% if user.is_authenticated %}
+      <nav>
+        {% with n=request.resolver_match.url_name %}
+        <a href="{% url 'uebersicht' %}" class="{% if n == 'uebersicht' %}active{% endif %}">Übersicht</a>
+        <a href="{% url 'medien_liste' %}" class="{% if n == 'medien_liste' or n == 'medium_detail' %}active{% endif %}">Medien &amp; CPU</a>
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Verwaltung ↗</a>{% endif %}
+        {% endwith %}
+      </nav>
+      <div class="sidebar-user">
+        Angemeldet als <b>{{ user.get_username }}</b>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="link">Abmelden</button></form>
+      </div>
+      {% endif %}
+    </aside>
+    <main class="main">
+      {% if portal_hinweis %}<div class="hinweis-band">{{ portal_hinweis }}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>
